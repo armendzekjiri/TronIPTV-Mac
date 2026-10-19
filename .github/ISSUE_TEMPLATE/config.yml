@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/armendzekjiri/TronIPTV-Mac/security/advisories/new
+    about: Please report security issues privately, never in public issues.
+  - name: Download the latest release
+    url: https://github.com/armendzekjiri/TronIPTV-Mac/releases
+    about: Check whether your issue is already fixed in the newest version.

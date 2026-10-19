@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in TronIPTV doesn't work as expected.
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+        **Never post playlist URLs, Xtream server addresses, usernames, or passwords.** Replace them with `example.com`.
+  - type: input
+    id: version
+    attributes:
+      label: TronIPTV version
+      description: Shown under **TronIPTV → About TronIPTV**.
+      placeholder: v0.1.0
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 15.6 (Apple silicon)
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Playlist type
+      options:
+        - Xtream Codes
+        - M3U URL
+        - M3U file
+        - Not related to a playlist
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation
+      options:
+        - Mac App Store
+        - DMG from GitHub
+        - Built from source
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Movies
+        2. Search for ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include any error message shown. Screenshots help; blur private details.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this hasn't been reported.
+          required: true
+        - label: I removed all credentials and private URLs from this report.
+          required: true

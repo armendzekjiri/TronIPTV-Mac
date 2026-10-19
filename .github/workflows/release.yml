@@ -1,0 +1,139 @@
+name: Release
+
+# Pushing a SemVer tag (v1.2.3 or v1.2.3-rc.1) builds a signed, notarized DMG and publishes a GitHub release.
+# Run the workflow manually with "app_store" checked to also upload the build to App Store Connect (TestFlight).
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   APPLE_TEAM_ID                  Team ID of the Apple Developer account
+#   BUILD_CERTIFICATES_P12         base64 of a .p12 holding "Developer ID Application" and "Apple Distribution"
+#                                  (plus "3rd Party Mac Developer Installer" for App Store uploads)
+#   BUILD_CERTIFICATES_PASSWORD    password of that .p12
+#   ASC_KEY_ID, ASC_ISSUER_ID      App Store Connect API key (Users and Access → Integrations), role App Manager
+#   ASC_KEY_P8                     base64 of the AuthKey_XXXX.p8 file
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build (e.g. v0.1.0)
+        required: true
+      app_store:
+        description: Also upload to App Store Connect
+        type: boolean
+        default: false
+
+permissions:
+  contents: write      # create the release
+  id-token: write      # build provenance attestation
+  attestations: write
+
+jobs:
+  release:
+    name: Build, notarize and publish
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0 # the build number is the commit count
+
+      - name: Resolve version
+        id: version
+        run: |
+          tag="${{ inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          prerelease=false
+          # 0.x versions and SemVer pre-release tags are published as GitHub pre-releases.
+          if [[ "$version" == *-* || "$version" == 0.* ]]; then prerelease=true; fi
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "marketing=${version%%-*}"
+            echo "build=$(git rev-list --count HEAD)"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      - name: Install tools
+        run: brew install xcodegen
+
+      - name: Import signing certificates
+        env:
+          P12: ${{ secrets.BUILD_CERTIFICATES_P12 }}
+          P12_PASSWORD: ${{ secrets.BUILD_CERTIFICATES_PASSWORD }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          keychain="$RUNNER_TEMP/build.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/certs.p12"
+          security import "$RUNNER_TEMP/certs.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/certs.p12"
+          echo "$ASC_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: |
+          scripts/fetch-vlckit.sh
+          xcodegen generate
+          xcodebuild test -project TronIPTV.xcodeproj -scheme TronIPTV -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
+
+      - name: Build notarized DMG
+        run: scripts/release.sh dmg "${{ steps.version.outputs.marketing }}" "${{ steps.version.outputs.build }}"
+
+      - name: Rename DMG to the full version
+        if: steps.version.outputs.version != steps.version.outputs.marketing
+        run: |
+          cd build/dist
+          mv "TronIPTV-${{ steps.version.outputs.marketing }}-macOS.dmg" "TronIPTV-${{ steps.version.outputs.version }}-macOS.dmg"
+          shasum -a 256 ./*.dmg > SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: build/dist/*.dmg
+
+      - name: Release notes
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > build/release-notes.md
+          [[ -s build/release-notes.md ]] || echo "See the commit history for changes in this release." > build/release-notes.md
+          {
+            echo
+            echo "---"
+            echo "**Download** \`TronIPTV-$version-macOS.dmg\`, open it and drag TronIPTV to Applications. Requires macOS 14 Sonoma or later (Apple silicon or Intel)."
+            echo "Verify downloads with \`SHA256SUMS.txt\` or \`gh attestation verify <file> --repo ${{ github.repository }}\`."
+          } >> build/release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(--title "TronIPTV ${{ steps.version.outputs.version }}" --notes-file build/release-notes.md --verify-tag)
+          [[ "${{ steps.version.outputs.prerelease }}" == "true" ]] && args+=(--prerelease)
+          gh release create "${{ steps.version.outputs.tag }}" build/dist/* "${args[@]}"
+
+      - name: Upload to App Store Connect
+        if: inputs.app_store
+        run: scripts/release.sh appstore "${{ steps.version.outputs.marketing }}" "${{ steps.version.outputs.build }}"
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
