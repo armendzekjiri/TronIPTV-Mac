@@ -1,0 +1,7 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="bipbop" group-title="Apple Samples",Apple BipBop (HLS, MPEG-TS)
+https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8
+#EXTINF:-1 tvg-id="bipbop-fmp4" group-title="Apple Samples",Apple BipBop (HLS, fMP4)
+https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8
+#EXTINF:-1 group-title="Blender Open Movies",Big Buck Bunny
+https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4
