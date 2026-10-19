@@ -9,7 +9,7 @@ enum TestEnvironment {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("TronIPTVTests-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         setenv("TRONIPTV_DATA_DIR", dir.path, 1)
-        precondition(AppPaths.dataDir == dir, "AppPaths was read before the test environment was set up")
+        precondition(AppPaths.dataDir.standardizedFileURL.path == dir.standardizedFileURL.path, "AppPaths was read before the test environment was set up")
         return dir
     }()
 }
