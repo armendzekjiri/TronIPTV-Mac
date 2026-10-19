@@ -28,9 +28,14 @@ final class ImageCache: @unchecked Sendable {
         memory.object(forKey: key(url, pixelSize))
     }
 
-    func image(_ url: String, pixelSize: Int) async -> NSImage? {
+    /// NSImage isn't Sendable; decoded images are immutable after creation, so handing them across is safe.
+    struct Loaded: @unchecked Sendable {
+        let image: NSImage
+    }
+
+    func image(_ url: String, pixelSize: Int) async -> Loaded? {
         let cacheKey = key(url, pixelSize)
-        if let hit = memory.object(forKey: cacheKey) { return hit }
+        if let hit = memory.object(forKey: cacheKey) { return Loaded(image: hit) }
         guard let parsed = URL(string: url), ["http", "https"].contains(parsed.scheme?.lowercased() ?? "") else {
             return nil
         }
@@ -40,7 +45,7 @@ final class ImageCache: @unchecked Sendable {
               (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) ?? true,
               let image = Self.downsample(data, maxPixels: pixelSize) else { return nil }
         memory.setObject(image, forKey: cacheKey)
-        return image
+        return Loaded(image: image)
     }
 
     func removeAll() {
@@ -87,7 +92,7 @@ struct RemoteImage<Placeholder: View>: View {
         .task(id: url) {
             image = nil
             guard let url else { return }
-            image = await ImageCache.shared.image(url, pixelSize: pixelSize)
+            image = await ImageCache.shared.image(url, pixelSize: pixelSize)?.image
         }
     }
 }
