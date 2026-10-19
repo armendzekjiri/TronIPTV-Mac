@@ -1,0 +1,16 @@
+// Shared build settings. Version numbers are overridden by CI from the git tag and run number.
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+PRODUCT_BUNDLE_IDENTIFIER = mk.troniptv.app
+MACOSX_DEPLOYMENT_TARGET = 14.0
+SWIFT_VERSION = 6.0
+
+// Signing. Set your Apple Developer Team ID in Config/Local.xcconfig (git-ignored) or pass
+// DEVELOPMENT_TEAM=XXXXXXXXXX to xcodebuild. CI passes it from the APPLE_TEAM_ID secret.
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic
+ENABLE_HARDENED_RUNTIME = YES
+
+#include? "Local.xcconfig"
