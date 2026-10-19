@@ -12,14 +12,14 @@ DEST="$ROOT/Frameworks"
 STAMP="$DEST/.vlckit-version"
 
 if [[ -d "$DEST/VLCKit.xcframework" && "$(cat "$STAMP" 2>/dev/null)" == "$VERSION" ]]; then
-  echo "VLCKit $VERSION already present."
+  echo "VLCKit ${VERSION} already present."
   exit 0
 fi
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-echo "Downloading VLCKit $VERSION…"
+echo "Downloading VLCKit ${VERSION}..."
 curl --fail --location --silent --show-error --retry 3 --output "$WORK/vlckit.tar.xz" "$URL"
 echo "$SHA256  $WORK/vlckit.tar.xz" | shasum -a 256 --check --status || {
   echo "error: VLCKit checksum mismatch" >&2
