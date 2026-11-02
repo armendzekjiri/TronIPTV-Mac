@@ -33,6 +33,24 @@ Both builds are sandboxed with the same entitlements (`App/TronIPTV.entitlements
 
 ## Uploading a build
 
+### Xcode Cloud (recommended)
+
+Xcode Cloud signs with cloud-managed certificates, so no `.p12` or GitHub secrets are needed. The project is generated
+on each build by `ci_scripts/ci_post_clone.sh`, which also sets the build number from `CI_BUILD_NUMBER`.
+
+One-time setup, from Xcode signed in to the publishing team:
+
+1. `scripts/fetch-vlckit.sh && xcodegen generate && open TronIPTV.xcodeproj`
+2. **Integrate → Create Workflow…**, and grant Xcode Cloud access to the GitHub repository when asked.
+3. Workflow: start condition **Tag Changes** (tags beginning with `v`), action **Archive** with the
+   **TronIPTV App Store** scheme and deployment preparation **App Store Connect**, post-action **TestFlight Internal
+   Testing**.
+
+Pushing a tag such as `v0.1.0` then uploads the build to TestFlight. Xcode Cloud build numbers start at 1, so don't
+mix in uploads from `scripts/release.sh appstore`, which use the git commit count.
+
+### GitHub Actions or locally
+
 - CI: Actions → **Release** → *Run workflow*, enter the tag, check **Also upload to App Store Connect**.
 - Locally: `APPLE_TEAM_ID=ABCDE12345 ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=~/AuthKey_….p8 scripts/release.sh appstore 0.1.0`
 

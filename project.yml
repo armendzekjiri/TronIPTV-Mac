@@ -77,3 +77,16 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: mk.troniptv.app.tests
         CODE_SIGNING_ALLOWED: NO
+
+schemes:
+  # Archived by Xcode Cloud for the Mac App Store (no in-app update check). See docs/APP_STORE.md.
+  TronIPTV App Store:
+    build:
+      targets:
+        TronIPTV: all
+    run:
+      config: AppStore
+    profile:
+      config: AppStore
+    archive:
+      config: AppStore

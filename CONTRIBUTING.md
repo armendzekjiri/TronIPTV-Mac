@@ -37,6 +37,7 @@ keeps the encryption key in that folder instead of your Keychain. Debug builds a
 | `App/Info.plist`, `App/TronIPTV.entitlements` | Bundle metadata and sandbox entitlements. |
 | `project.yml`, `Config/*.xcconfig` | XcodeGen spec and build settings (version, bundle ID, signing). |
 | `scripts/` | VLCKit download, dev app bundle, icon generation, release (DMG and App Store). |
+| `ci_scripts/` | Xcode Cloud hook that generates the project before App Store builds. |
 
 ## Conventions
 
@@ -52,8 +53,8 @@ keeps the encryption key in that folder instead of your Keychain. Debug builds a
 2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
 3. The **Release** workflow tests, builds, signs with Developer ID, notarizes, and publishes the DMG with checksums
    and a provenance attestation. Tags with a pre-release suffix or a `0.` major version are marked as pre-releases.
-4. For the Mac App Store, run the **Release** workflow manually with *Also upload to App Store Connect* checked
-   (or run `scripts/release.sh appstore 0.2.0` locally), then submit the build in App Store Connect.
+4. For the Mac App Store, the same tag starts the Xcode Cloud workflow, which uploads the build to TestFlight;
+   then submit it in App Store Connect.
    See [docs/APP_STORE.md](docs/APP_STORE.md).
 
 The workflow needs these repository secrets: `APPLE_TEAM_ID`, `BUILD_CERTIFICATES_P12`, `BUILD_CERTIFICATES_PASSWORD`,
